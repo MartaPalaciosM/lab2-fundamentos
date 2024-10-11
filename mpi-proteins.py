@@ -10,19 +10,27 @@ size = comm.Get_size()
 # we want the master process (rank 0) to take the input from the user and read the dataset
 if rank == 0: 
     pattern=input('Introduce the pattern to search: ').upper()
-    start_time = time()
-    mydata= pd.read_csv('proteins.csv', delimiter= ',')
-    block_size = len(mydata)// size
 
 else: 
     pattern = None
+
+start_time= time()
+
+#share with the rest of processes the pattern
+pattern = comm.bcast(pattern, root=0)
+
+if rank==0: 
+    mydata= pd.read_csv('proteins-15M.csv', delimiter= ',')
+    block_size = len(mydata)// size
+else: 
     mydata = None
     block_size = None
 
-#share with the rest of processes the pattern, and the block_size
-pattern = comm.bcast(pattern, root=0)
+#share with the rest of processes the data
 block_size = comm.bcast(block_size, root=0)
+mydata = comm.bcast(mydata, root=0)
 
+print(MPI.COMM_WORLD.Get_rank())
 #distribute the block_data 
 block_data = comm.scatter([mydata[i*block_size:(i+1)*block_size] for i in range (size)], root=0)
 
@@ -50,4 +58,3 @@ if rank == 0:
     plt.title('Bar plot of Id vs Number of repeated patterns')
     plt.tight_layout()
     plt.show()
-
