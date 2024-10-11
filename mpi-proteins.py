@@ -20,7 +20,7 @@ start_time= time()
 pattern = comm.bcast(pattern, root=0)
 
 if rank==0: 
-    mydata= pd.read_csv('proteins-15M.csv', delimiter= ',')
+    mydata= pd.read_csv('proteins.csv', delimiter= ',')
     block_size = len(mydata)// size
 else: 
     mydata = None
