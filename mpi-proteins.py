@@ -2,15 +2,21 @@ from mpi4py import MPI
 import pandas as pd 
 from time import time
 import matplotlib.pyplot as plt 
+import sys
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-# we want the master process (rank 0) to take the input from the user and read the dataset
-if rank == 0: 
-    pattern=input('Introduce the pattern to search: ').upper()
+def count_lines(file):
+    with open(file, 'r') as f: 
+        count = sum (1 for line in f)
+    return count
 
+#we want the master process (rank 0) to take the input from the user and read the dataset
+if rank == 0: 
+    pattern=input('Introduce the pattern to search: ')
+    pattern = pattern.upper()
 else: 
     pattern = None
 
@@ -18,21 +24,32 @@ start_time= time()
 
 #share with the rest of processes the pattern
 pattern = comm.bcast(pattern, root=0)
-
 if rank==0: 
-    mydata= pd.read_csv('proteins.csv', delimiter= ',')
-    block_size = len(mydata)// size
+    #mydata= pd.read_csv('proteins.csv', delimiter= ',')
+    num_lines = count_lines('proteins.csv')
+    block_size = num_lines// size
+    remainder = num_lines % size # in case the number of lines cant be divided evenly
 else: 
-    mydata = None
+    num_lines = None
     block_size = None
+    remainder= 0
 
 #share with the rest of processes the data
 block_size = comm.bcast(block_size, root=0)
-mydata = comm.bcast(mydata, root=0)
+num_lines = comm.bcast(num_lines, root=0)
 
-print(MPI.COMM_WORLD.Get_rank())
-#distribute the block_data 
-block_data = comm.scatter([mydata[i*block_size:(i+1)*block_size] for i in range (size)], root=0)
+#find the lines each rank will need to read
+start_line = rank*block_size
+end_line = start_line+block_size
+
+# ensure if lines where uneven, they are added to the las process 
+if rank == size-1: 
+    end_line += remainder
+
+#read the corresponding block_data 
+headers = pd.read_csv('proteins.csv', nrows=0).columns.tolist()
+block_data = pd.read_csv('proteins.csv', skiprows=range(0, start_line), nrows= end_line-start_line, header = None, names = headers, dtype={0:str, 1:str})
+
 
 #each process will look for the pattern in their corresponding block and count the repetitions
 block_data['contains pattern'] = block_data['sequence'].str.contains(pattern)
