@@ -67,11 +67,14 @@ if rank == 0:
     final_data= final_data.head(10)
     end_time=time()
     print('Execution time: ', end_time-start_time, 'seconds')
-    print('Maximum protein: ', final_data.iloc[0, 0], ' and occurrences: ', final_data.iloc[0,-1])
 
-    plt.bar(final_data['structureId'], final_data['repetitions pattern'])
-    plt.xlabel("Proteins's ID")
-    plt.ylabel("Occurrences")
-    plt.title('Bar plot of Id vs Number of repeated patterns')
-    plt.tight_layout()
-    plt.show()
+    if final_data.empty: 
+        print('Pattern not found')
+    else:
+        print('Maximum protein: ', final_data.iloc[0, 0], ' and occurrences: ', final_data.iloc[0,-1])
+        plt.bar(final_data['structureId'], final_data['repetitions pattern'])
+        plt.xlabel("Proteins's ID")
+        plt.ylabel("Occurrences")
+        plt.title('Bar plot of Id vs Number of repeated patterns')
+        plt.tight_layout()
+        plt.show()
